@@ -1,0 +1,145 @@
+{%- doc -%}
+  Renders the search action button.
+
+  @param {string} [style] - The style of the search action.
+  @param {string} [class] - Additional classes for the search action.
+
+  @example
+  {% render 'search', style: 'default', class: 'custom-class' %}
+{%- enddoc -%}
+
+{% unless style == 'none' %}
+  <search-button class="search-action{% if class != blank %} {{ class | strip }}{% endif %}">
+    <!-- Desktop: Search bar -->
+    <button
+      on:click="#search-modal/showDialog"
+      class="button button-unstyled search-bar-button search-bar-button--desktop"
+      aria-label="Search"
+    >
+      <div class="search-bar">
+        <span class="search-bar__text">DHA Gummy</span>
+        <span
+          aria-hidden="true"
+          class="svg-wrapper"
+        >
+          {{ 'icon-search.svg' | inline_asset_content }}
+        </span>
+      </div>
+    </button>
+    
+    <!-- Mobile: Icon only -->
+    <button
+      on:click="#search-modal/showDialog"
+      class="button button-unstyled search-modal__button header-actions__action search-bar-button--mobile"
+      aria-label="Search"
+    >
+      <span
+        aria-hidden="true"
+        class="svg-wrapper"
+      >
+        {{ 'icon-search.svg' | inline_asset_content }}
+      </span>
+    </button>
+  </search-button>
+{% endunless %}
+
+{% stylesheet %}
+  .search-action {
+    --search-border-radius: var(--style-border-radius-inputs);
+    --search-border-width: var(--style-border-width-inputs);
+
+    display: flex;
+  }
+
+  /* Mobile: Show icon button, hide search bar */
+  .search-bar-button--desktop {
+    display: none;
+  }
+
+  .search-bar-button--mobile {
+    display: flex;
+  }
+
+  /* Desktop: Show search bar, hide icon button */
+  @media screen and (min-width: 750px) {
+    .search-bar-button--desktop {
+      display: flex;
+      width: auto;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .search-bar-button--mobile {
+      display: none;
+    }
+  }
+
+  .search-bar-button {
+    width: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: auto;
+    background: white;
+    border: 1px solid #f27522;
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .search-bar__text {
+    flex: 1;
+    color: #f27522;
+    font-size: 1rem;
+    text-align: left;
+  }
+
+  .search-bar .svg-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: #f27522;
+  }
+
+  .search-bar .svg-wrapper svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+    stroke: currentColor;
+  }
+
+  .header__column--center .search-action {
+    width: auto;
+    flex-grow: 1;
+  }
+
+  @media screen and (min-width: 750px) {
+    .header__column--center .search-action {
+      flex-grow: 0;
+    }
+  }
+
+  :is(.header__column--left, .header__column--center) .search-action {
+    @media screen and (min-width: 750px) {
+      margin-inline: calc(var(--padding-lg) * -1);
+    }
+  }
+
+  .header__column--right .search-action {
+    @media screen and (min-width: 750px) {
+      margin-inline: calc(var(--gap-md) * -1) calc(var(--gap-xs) * -1);
+    }
+  }
+{% endstylesheet %}

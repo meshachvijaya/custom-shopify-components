@@ -1,0 +1,223 @@
+{% liquid
+  assign block_settings = block.settings
+  assign menu_content_type = block_settings.menu_style | default: 'text'
+  assign image_border_radius = block_settings.image_border_radius
+  assign color_scheme_classes = ''
+  assign color_scheme_setting_id = 'color_scheme_' | append: section.settings.menu_row
+  assign current_color_scheme = block_settings.color_scheme
+  assign parent_color_scheme = section.settings[color_scheme_setting_id]
+
+  if parent_color_scheme.id != current_color_scheme.id
+    assign color_scheme_classes = ' color-' | append: current_color_scheme
+  endif
+
+  # Check if header and menu colors match. This is used to apply different padding styles in css
+  if parent_color_scheme.settings.background.rgb == current_color_scheme.settings.background.rgb
+    assign color_scheme_classes = color_scheme_classes | append: ' color-scheme-matches-parent'
+  endif
+
+  if block_settings.menu_style == 'featured_collections'
+    assign ratio = block_settings.featured_collections_aspect_ratio
+  elsif block_settings.menu_style == 'featured_products'
+    assign ratio = block_settings.featured_products_aspect_ratio
+  endif
+%}
+
+{% capture children %}
+  {% for link in block_settings.menu.links %}
+    <li
+      role="presentation"
+      class="menu-list__list-item"
+      on:focus="/activate"
+      on:blur="/deactivate"
+      on:pointerenter="/activate"
+      on:pointerleave="/deactivate"
+    >
+      <a
+        href="{{ link.url }}"
+        data-skip-node-update="true"
+        class="menu-list__link{% if link.active %} menu-list__link--active{% endif %}"
+        {%- if link.links != blank -%}
+          aria-controls="submenu-{{ forloop.index }}"
+          aria-haspopup="true"
+          aria-expanded="false"
+        {%- endif -%}
+        ref="menuitem"
+      >
+        <span class="menu-list__link-title">{{- link.title -}}</span>
+      </a>
+      {%- if link.links != blank -%}
+        <div class="menu-list__submenu{{ color_scheme_classes }}" ref="submenu[]">
+          <div
+            id="submenu-{{ forloop.index }}"
+            class="menu-list__submenu-inner"
+            style="{% render 'submenu-font-styles', settings: block_settings %}"
+          >
+            {% assign list_id = 'MegaMenuList-' | append: forloop.index %}
+            {% render 'mega-menu',
+              section: section,
+              parent_link: link,
+              id: list_id,
+              menu_content_type: menu_content_type,
+              content_aspect_ratio: ratio,
+              image_border_radius: image_border_radius
+            %}
+          </div>
+        </div>
+      {%- endif -%}
+    </li>
+  {% endfor %}
+  <li
+    class="menu-list__list-item"
+    role="presentation"
+    slot="more"
+    on:focus="/activate"
+    on:blur="/deactivate"
+    on:pointerenter="/activate"
+    on:pointerleave="/deactivate"
+  >
+    <button role="menuitem" class="button menu-list__link button-unstyled">
+      <span class="menu-list__link-title">{{ 'actions.more' | t }}</span>
+    </button>
+  </li>
+{% endcapture %}
+
+<nav header-menu data-mobile-expand-submenus="true">
+  <div
+    class="menu-list"
+    style="{% render 'menu-font-styles', settings: block_settings %}"
+  >
+    {% assign class = 'overflow-menu' | append: color_scheme_classes %}
+    {% render 'overflow-list', class: class, ref: 'overflowMenu', children: children, minimum-items: 2, defer: true %}
+  </div>
+</nav>
+
+{% stylesheet %}
+  /* Force submenus to be visible on mobile */
+  @media screen and (max-width: 749px) {
+    /* Override the default hidden state - submenus should be visible when aria-expanded is true */
+    .menu-list__list-item:has([aria-expanded='true']) > .menu-list__submenu,
+    .menu-list__list-item[aria-expanded='true'] > .menu-list__submenu {
+      --submenu-content-opacity: 1 !important;
+      visibility: visible !important;
+      clip-path: rect(0 100% 100% 0) !important;
+    }
+    
+    /* Force all submenus visible on mobile (more aggressive) */
+    header-menu .menu-list__submenu {
+      --submenu-content-opacity: 1 !important;
+      visibility: visible !important;
+      clip-path: rect(0 100% 100% 0) !important;
+    }
+    
+    /* Ensure the header-menu component shows submenus */
+    header-menu {
+      --submenu-opacity: 1 !important;
+    }
+    
+    /* Override any hidden states */
+    .menu-list__submenu[hidden],
+    .menu-list__submenu[aria-hidden="true"] {
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+  }
+{% endstylesheet %}
+
+<script>
+  // Expand submenus on mobile by working with the HeaderMenu web component
+  (function() {
+    function expandSubmenusOnMobile() {
+      if (window.innerWidth > 749) return;
+      
+      // Find the header-menu web component
+      const headerMenu = document.querySelector('header-menu');
+      if (!headerMenu) return;
+      
+      // Find all list items with submenus
+      const listItems = document.querySelectorAll('.menu-list__list-item');
+      
+      listItems.forEach(function(listItem) {
+        const submenu = listItem.querySelector('.menu-list__submenu');
+        const link = listItem.querySelector('.menu-list__link[aria-haspopup="true"]');
+        
+        if (submenu && link) {
+          // Method 1: Use the HeaderMenu's activate method by triggering the event
+          // The on:pointerenter="/activate" syntax means we need to dispatch pointerenter on the list item
+          const pointerEvent = new PointerEvent('pointerenter', {
+            bubbles: true,
+            cancelable: true,
+            pointerId: 1,
+            pointerType: 'mouse'
+          });
+          listItem.dispatchEvent(pointerEvent);
+          
+          // Method 2: Directly set the CSS variables that control submenu visibility
+          // Based on header-menu.js, these are the variables that control visibility
+          const submenuHeight = submenu.offsetHeight || submenu.scrollHeight;
+          headerMenu.style.setProperty('--submenu-height', submenuHeight + 'px');
+          headerMenu.style.setProperty('--submenu-opacity', '1');
+          
+          // Method 3: Set aria-expanded on both the link and list item
+          link.setAttribute('aria-expanded', 'true');
+          listItem.setAttribute('aria-expanded', 'true');
+          
+          // Method 4: Force submenu visible with CSS (backup)
+          submenu.style.setProperty('visibility', 'visible', 'important');
+          submenu.style.setProperty('opacity', '1', 'important');
+          submenu.style.setProperty('clip-path', 'rect(0 100% 100% 0)', 'important');
+        }
+      });
+    }
+    
+    // Wait for the header-menu component to be defined and ready
+    function init() {
+      // Check if custom element is defined
+      if (customElements.get('header-menu')) {
+        expandSubmenusOnMobile();
+      } else {
+        // Wait for it to be defined
+        customElements.whenDefined('header-menu').then(function() {
+          setTimeout(expandSubmenusOnMobile, 100);
+        });
+      }
+      
+      // Run on various events
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(expandSubmenusOnMobile, 100);
+          setTimeout(expandSubmenusOnMobile, 500);
+        });
+      } else {
+        setTimeout(expandSubmenusOnMobile, 100);
+        setTimeout(expandSubmenusOnMobile, 500);
+      }
+      
+      window.addEventListener('load', function() {
+        setTimeout(expandSubmenusOnMobile, 200);
+        setTimeout(expandSubmenusOnMobile, 1000);
+      });
+      
+      // Watch for resize
+      window.addEventListener('resize', function() {
+        if (window.innerWidth <= 749) {
+          expandSubmenusOnMobile();
+        }
+      });
+      
+      // Use MutationObserver to catch when menu items are added
+      const observer = new MutationObserver(function() {
+        if (window.innerWidth <= 749) {
+          expandSubmenusOnMobile();
+        }
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    }
+    
+    init();
+  })();
+</script>

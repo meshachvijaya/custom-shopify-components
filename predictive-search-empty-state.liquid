@@ -1,0 +1,94 @@
+{% doc %}
+  Renders the predictive search empty state
+
+  @param {number} shadow_opacity - shadow opacity for the empty state container shadow
+  @param {string} products_test_id - a playwright test id, used to differentiate empty state from 'real' search results
+  @param {boolean} [load_empty_state] - Load the empty state or not
+
+  @example
+  {% render 'predictive-search-empty-state', shadow_opacity: 0.1, products_test_id: 'empty-state' %}
+{% enddoc %}
+
+<div
+  id="predictive-search-results"
+  class="predictive-search-dropdown predictive-search-dropdown--empty-state"
+  role="listbox"
+  aria-expanded="true"
+  style="--color-shadow: rgb(var(--color-foreground-rgb) / {{ shadow_opacity }});"
+>
+  <div class="predictive-search-results__inner">
+    {% liquid
+      assign collection = settings.empty_state_collection | default: collections.all
+      assign default_title = 'content.search_results_resource_products' | t
+      assign title = settings.empty_state_collection.title | default: default_title
+      assign products = collection.products
+    %}
+
+    {% if products.size > 0 %}
+      {% render 'predictive-search-products-list',
+        products_test_id: products_test_id,
+        title: title,
+        products: products,
+        limit: 4
+      %}
+    {% else %}
+      {% comment %} Fallback to collections.all if empty_state_collection has no products {% endcomment %}
+      {% assign fallback_collection = collections.all %}
+      {% assign products = fallback_collection.products %}
+      {% assign title = default_title %}
+      {% if products.size > 0 %}
+        {% render 'predictive-search-products-list',
+          products_test_id: products_test_id,
+          title: title,
+          products: products,
+          limit: 4
+        %}
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% stylesheet %}
+  /* Ensure the empty state dropdown and its product list are always visible */
+  .predictive-search-dropdown--empty-state {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  .predictive-search-dropdown--empty-state .predictive-search-results__inner {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .predictive-search-dropdown--empty-state .predictive-search-results__products {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .predictive-search-dropdown--empty-state .predictive-search-results__wrapper-products {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--gap-md, 1rem);
+  }
+
+  @media screen and (max-width: 749px) {
+    .predictive-search-dropdown--empty-state .predictive-search-results__wrapper-products {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .predictive-search-dropdown--empty-state .predictive-search-results__card {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .predictive-search-dropdown--empty-state .predictive-search-results__no-results {
+    padding: var(--padding-lg, 1.5rem);
+    text-align: center;
+  }
+{% endstylesheet %}
