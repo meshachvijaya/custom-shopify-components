@@ -501,6 +501,8 @@
   let touchStartX = 0;
   let touchEndX = 0;
   let minSwipeDistance = 50;
+  let autoSlideInterval = null;
+  const autoSlideDelay = 5000; // 5 seconds
 
   function updateSlider() {
     const translateX = -currentSlide * 100;
@@ -539,18 +541,38 @@
     nextSlide();
   }
 
+  function startAutoSlide() {
+    stopAutoSlide(); // Clear any existing interval
+    autoSlideInterval = setInterval(() => {
+      if (!isTransitioning) {
+        nextSlide();
+      }
+    }, autoSlideDelay);
+  }
+
+  function stopAutoSlide() {
+    if (autoSlideInterval) {
+      clearInterval(autoSlideInterval);
+      autoSlideInterval = null;
+    }
+  }
+
   // Arrow navigation
   if (prevBtn) {
     prevBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      stopAutoSlide();
       prevSlide();
+      startAutoSlide();
     });
   }
 
   if (nextBtn) {
     nextBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      stopAutoSlide();
       nextSlide();
+      startAutoSlide();
     });
   }
 
@@ -558,12 +580,15 @@
   dots.forEach((dot, index) => {
     dot.addEventListener('click', (e) => {
       e.preventDefault();
+      stopAutoSlide();
       goToSlide(index);
+      startAutoSlide();
     });
   });
 
   // Touch/swipe support
   track.addEventListener('touchstart', (e) => {
+    stopAutoSlide();
     touchStartX = e.touches[0].clientX;
     touchEndX = touchStartX; // Initialize to prevent undefined
   }, { passive: true });
@@ -584,6 +609,7 @@
     
     touchStartX = 0;
     touchEndX = 0;
+    startAutoSlide();
   });
 
   // Keyboard navigation
@@ -591,8 +617,19 @@
     // Always go forward (left direction) regardless of key pressed
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
+      stopAutoSlide();
       nextSlide();
+      startAutoSlide();
     }
+  });
+
+  // Pause auto-slide on hover
+  slider.addEventListener('mouseenter', () => {
+    stopAutoSlide();
+  });
+
+  slider.addEventListener('mouseleave', () => {
+    startAutoSlide();
   });
 
   // Make slider focusable for keyboard navigation
@@ -600,5 +637,10 @@
 
   // Initialize
   updateSlider();
+  
+  // Start auto-slide (only if more than one slide)
+  if (slides.length > 1) {
+    startAutoSlide();
+  }
 })();
 </script>
