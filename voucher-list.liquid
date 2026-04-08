@@ -1,0 +1,725 @@
+{% comment %}
+  Voucher List Section
+  Shows available vouchers for customers with "march_2026_campaign" tag
+  Tracks voucher usage by checking customer orders
+{% endcomment %}
+
+{%- liquid
+  assign required_tag = 'march_2026_campaign'
+  assign has_access = false
+  assign used_vouchers = ''
+  assign product_url = 'https://coolvita.id/products/promo-spesial-cool-vita-cukup-bayar-0-99k-dapat-gift-package-399-9k?variant=46288043573419'
+  
+  if customer
+    if customer.tags contains required_tag
+      assign has_access = true
+    endif
+    if has_access
+      for order in customer.orders
+        for discount_code in order.discount_codes
+          assign used_vouchers = used_vouchers | append: discount_code.code | append: ','
+        endfor
+      endfor
+    endif
+  endif
+-%}
+
+<div class="voucher-list-section" data-voucher-section>
+  {% if customer and has_access %}
+    <div class="voucher-list-container">
+      <div class="voucher-list-header">
+        <h2 class="voucher-list-title">{{ section.settings.title | default: 'Available Vouchers' }}</h2>
+        <p class="voucher-list-description">{{ section.settings.description | default: 'Use these vouchers at checkout to get amazing discounts!' }}</p>
+      </div>
+
+      <div class="voucher-list-grid">
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign voucher_code = block.settings.voucher_code
+            assign voucher_title = block.settings.voucher_title
+            assign voucher_description = block.settings.voucher_description
+            assign voucher_discount = block.settings.voucher_discount
+            assign voucher_expiry = block.settings.voucher_expiry
+            assign is_used = false
+            
+            # Check if this voucher has been used
+            if used_vouchers != blank and voucher_code != blank
+              assign voucher_check = voucher_code | append: ','
+              if used_vouchers contains voucher_check
+                assign is_used = true
+              endif
+            endif
+          -%}
+          
+          <div class="voucher-card {% if is_used %}voucher-card--used{% endif %}" {{ block.shopify_attributes }}>
+            <div class="voucher-card__content">
+              <div class="voucher-card__header">
+                <h3 class="voucher-card__title">{{ voucher_title | default: 'Voucher' }}</h3>
+                {% if voucher_discount != blank %}
+                  <div class="voucher-card__discount">{{ voucher_discount }}</div>
+                {% endif %}
+              </div>
+              
+              {% if voucher_description != blank %}
+                <p class="voucher-card__description">{{ voucher_description }}</p>
+              {% endif %}
+              
+              <div class="voucher-card__code-container">
+                <div class="voucher-card__code-label">Voucher Code:</div>
+                <div class="voucher-card__code" data-voucher-code="{{ voucher_code }}">
+                  <span class="voucher-code-text">{{ voucher_code }}</span>
+                  <button 
+                    type="button" 
+                    class="voucher-card__copy-btn" 
+                    data-copy-voucher
+                    aria-label="Copy voucher code"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M5.5 5.5H3.5C2.67157 5.5 2 6.17157 2 7V12.5C2 13.3284 2.67157 14 3.5 14H9C9.82843 14 10.5 13.3284 10.5 12.5V10.5M5.5 5.5C5.5 4.67157 6.17157 4 7 4H12.5C13.3284 4 14 4.67157 14 5.5V11C14 11.8284 13.3284 12.5 12.5 12.5H10.5M5.5 5.5V2.5M5.5 5.5H2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              {% if voucher_expiry != blank %}
+                <div class="voucher-card__expiry">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 1.5V7L10 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5"/>
+                  </svg>
+                  <span>Expires: {{ voucher_expiry }}</span>
+                </div>
+              {% endif %}
+              
+              {% if is_used %}
+                <div class="voucher-card__badge voucher-card__badge--used">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Used
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {%- endfor -%}
+      </div>
+      
+      {% if section.blocks.size == 0 %}
+        <div class="voucher-list-empty">
+          <p>No vouchers available at this time.</p>
+        </div>
+      {% endif %}
+    </div>
+  {% elsif customer %}
+    <div class="voucher-access-denied">
+      <div class="voucher-access-denied__icon">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="2"/>
+          <path d="M32 20V32M32 40H32.02" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2 class="voucher-access-denied__title">{{ section.settings.access_denied_title | default: 'Access Restricted' }}</h2>
+      <p class="voucher-access-denied__message">
+        {{ section.settings.access_denied_message | default: 'You need to purchase the special promotion package to access these vouchers.' }}
+      </p>
+      <a href="{{ product_url }}" class="voucher-access-denied__button">
+        {{ section.settings.button_text | default: 'Get Access Now' }}
+      </a>
+    </div>
+  {% else %}
+    <div class="voucher-login-required">
+      <div class="voucher-login-required__icon">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="24" r="8" stroke="currentColor" stroke-width="2"/>
+          <path d="M16 52C16 44 24 40 32 40C40 40 48 44 48 52" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2 class="voucher-login-required__title">{{ section.settings.login_title | default: 'Please Log In' }}</h2>
+      <p class="voucher-login-required__message">
+        {{ section.settings.login_message | default: 'You need to be logged in to view your vouchers.' }}
+      </p>
+      <a href="{{ routes.account_login_url }}" class="voucher-login-required__button">
+        {{ section.settings.login_button_text | default: 'Log In' }}
+      </a>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+  .voucher-list-section {
+    width: 100%;
+    padding: 40px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .voucher-list-container {
+    width: 100%;
+  }
+
+  .voucher-list-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .voucher-list-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 12px 0;
+  }
+
+  .voucher-list-description {
+    font-size: 16px;
+    color: #666;
+    margin: 0;
+  }
+
+  .voucher-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+    margin-top: 32px;
+  }
+
+  .voucher-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 2px solid #e0e0e0;
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .voucher-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: #ff8a00;
+  }
+
+  .voucher-card--used {
+    opacity: 0.7;
+    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  }
+
+  .voucher-card--used:hover {
+    transform: none;
+  }
+
+  .voucher-card__content {
+    position: relative;
+  }
+
+  .voucher-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .voucher-card__title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+    flex: 1;
+  }
+
+  .voucher-card__discount {
+    background: linear-gradient(135deg, #ff8a00 0%, #ffb347 100%);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    margin-left: 12px;
+  }
+
+  .voucher-card__description {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+  }
+
+  .voucher-card__code-container {
+    margin-bottom: 16px;
+  }
+
+  .voucher-card__code-label {
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .voucher-card__code {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 2px dashed #ff8a00;
+    border-radius: 8px;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .voucher-code-text {
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: 1px;
+    flex: 1;
+  }
+
+  .voucher-card__copy-btn {
+    background: #ff8a00;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .voucher-card__copy-btn:hover {
+    background: #ff6a00;
+    transform: scale(1.1);
+  }
+
+  .voucher-card__copy-btn:active {
+    transform: scale(0.95);
+  }
+
+  .voucher-card__expiry {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 12px;
+  }
+
+  .voucher-card__expiry svg {
+    flex-shrink: 0;
+  }
+
+  .voucher-card__badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .voucher-card__badge--used {
+    background: #ffebee;
+    color: #c62828;
+  }
+
+  .voucher-card__badge--used svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .voucher-list-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+  }
+
+  /* Access Denied Styles */
+  .voucher-access-denied,
+  .voucher-login-required {
+    text-align: center;
+    padding: 60px 20px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .voucher-access-denied__icon,
+  .voucher-login-required__icon {
+    color: #ff8a00;
+    margin: 0 auto 24px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .voucher-access-denied__title,
+  .voucher-login-required__title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 16px 0;
+  }
+
+  .voucher-access-denied__message,
+  .voucher-login-required__message {
+    font-size: 16px;
+    color: #666;
+    margin: 0 0 32px 0;
+    line-height: 1.6;
+  }
+
+  .voucher-access-denied__button,
+  .voucher-login-required__button {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff8a00 0%, #ffb347 100%);
+    color: #fff;
+    padding: 14px 32px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+  }
+
+  .voucher-access-denied__button:hover,
+  .voucher-login-required__button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 138, 0, 0.4);
+  }
+
+  .voucher-access-denied__button:active,
+  .voucher-login-required__button:active {
+    transform: translateY(0);
+  }
+
+  /* Copy Success Message */
+  .voucher-copy-success {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #4caf50;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    animation: slideIn 0.3s ease;
+  }
+
+  .voucher-copy-success.show {
+    display: flex;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .voucher-list-section {
+      padding: 24px 16px;
+    }
+
+    .voucher-list-title {
+      font-size: 24px;
+    }
+
+    .voucher-list-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .voucher-card {
+      padding: 20px;
+    }
+
+    .voucher-card__header {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .voucher-card__discount {
+      margin-left: 0;
+      align-self: flex-start;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  const section = document.querySelector('[data-voucher-section]');
+  if (!section) return;
+
+  // Copy voucher code functionality
+  const copyButtons = section.querySelectorAll('[data-copy-voucher]');
+  
+  copyButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const codeContainer = this.closest('.voucher-card__code');
+      const codeText = codeContainer.querySelector('.voucher-code-text');
+      const voucherCode = codeText.textContent.trim();
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(voucherCode).then(() => {
+        // Show success message
+        showCopySuccess();
+        
+        // Update button temporarily
+        const originalHTML = this.innerHTML;
+        this.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        this.style.background = '#4caf50';
+        
+        setTimeout(() => {
+          this.innerHTML = originalHTML;
+          this.style.background = '';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = voucherCode;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          showCopySuccess();
+        } catch (e) {
+          alert('Failed to copy code. Please copy manually: ' + voucherCode);
+        }
+        document.body.removeChild(textArea);
+      });
+    });
+  });
+
+  function showCopySuccess() {
+    // Remove existing success message if any
+    const existing = document.querySelector('.voucher-copy-success');
+    if (existing) {
+      existing.remove();
+    }
+
+    const successMsg = document.createElement('div');
+    successMsg.className = 'voucher-copy-success show';
+    successMsg.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16.5 5.5L7.5 14.5L3.5 10.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Voucher code copied!</span>
+    `;
+    document.body.appendChild(successMsg);
+
+    setTimeout(() => {
+      successMsg.classList.remove('show');
+      setTimeout(() => successMsg.remove(), 300);
+    }, 2000);
+  }
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Voucher List",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Section Title",
+      "default": "Available Vouchers"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Section Description",
+      "default": "Use these vouchers at checkout to get amazing discounts!"
+    },
+    {
+      "type": "text",
+      "id": "access_denied_title",
+      "label": "Access Denied Title",
+      "default": "Access Restricted"
+    },
+    {
+      "type": "textarea",
+      "id": "access_denied_message",
+      "label": "Access Denied Message",
+      "default": "You need to purchase the special promotion package to access these vouchers."
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Get Access Now"
+    },
+    {
+      "type": "text",
+      "id": "login_title",
+      "label": "Login Required Title",
+      "default": "Please Log In"
+    },
+    {
+      "type": "textarea",
+      "id": "login_message",
+      "label": "Login Required Message",
+      "default": "You need to be logged in to view your vouchers."
+    },
+    {
+      "type": "text",
+      "id": "login_button_text",
+      "label": "Login Button Text",
+      "default": "Log In"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "voucher",
+      "name": "Voucher",
+      "settings": [
+        {
+          "type": "text",
+          "id": "voucher_code",
+          "label": "Voucher Code",
+          "info": "The discount code that customers will use at checkout"
+        },
+        {
+          "type": "text",
+          "id": "voucher_title",
+          "label": "Voucher Title",
+          "default": "Special Discount"
+        },
+        {
+          "type": "textarea",
+          "id": "voucher_description",
+          "label": "Voucher Description",
+          "default": "Use this voucher to get an amazing discount on your purchase."
+        },
+        {
+          "type": "text",
+          "id": "voucher_discount",
+          "label": "Discount Display",
+          "default": "20% OFF",
+          "info": "Display text for the discount (e.g., '20% OFF', 'Save $50')"
+        },
+        {
+          "type": "text",
+          "id": "voucher_expiry",
+          "label": "Expiry Date",
+          "info": "Optional: Display expiry date (e.g., 'March 31, 2026')"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Voucher List",
+      "blocks": [
+        {
+          "type": "voucher",
+          "settings": {
+            "voucher_code": "B1TVZ24X9823",
+            "voucher_title": "15K Off",
+            "voucher_description": "min purchase 30K",
+            "voucher_discount": "15K Off"
+          }
+        },
+        {
+          "type": "voucher",
+          "settings": {
+            "voucher_code": "KED22R1GAS5V",
+            "voucher_title": "15K Off",
+            "voucher_description": "min purchase 30K",
+            "voucher_discount": "15K Off"
+          }
+        },
+        {
+          "type": "voucher",
+          "settings": {
+            "voucher_code": "WTAPJK9NA4MG",
+            "voucher_title": "15K Off",
+            "voucher_description": "min purchase 30K",
+            "voucher_discount": "15K Off"
+          }
+        },
+        {
+          "type": "voucher",
+          "settings": {
+            "voucher_code": "FA8HK3ZJ1EKE",
+            "voucher_title": "15K Off",
+            "voucher_description": "min purchase 30K",
+            "voucher_discount": "15K Off"
+          }
+        },
+        {
+          "type": "voucher",
+          "settings": {
+            "voucher_code": "VBAFCXAW64K2",
+            "voucher_title": "15K Off",
+            "voucher_description": "min purchase 30K",
+            "voucher_discount": "15K Off"
+          }
+        },
+        {
+          "type": "voucher",
+          "settings": {
+            "voucher_code": "1JA2XRNKBVM4",
+            "voucher_title": "15K Off",
+            "voucher_description": "min purchase 30K",
+            "voucher_discount": "15K Off"
+          }
+        },
+        {
+          "type": "voucher",
+          "settings": {
+            "voucher_code": "TJEPMWWB1A73",
+            "voucher_title": "50K Off",
+            "voucher_description": "min purchase 169K",
+            "voucher_discount": "50K Off"
+          }
+        },
+        {
+          "type": "voucher",
+          "settings": {
+            "voucher_code": "6D7NG2TQ24JZ",
+            "voucher_title": "50K Off",
+            "voucher_description": "min purchase 169K",
+            "voucher_discount": "50K Off"
+          }
+        },
+        {
+          "type": "voucher",
+          "settings": {
+            "voucher_code": "ZY9Q5MQR4DEW",
+            "voucher_title": "110K Off",
+            "voucher_description": "min purchase 1,1jt",
+            "voucher_discount": "110K Off"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
