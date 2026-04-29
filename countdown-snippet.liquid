@@ -1,0 +1,168 @@
+<style>
+  :root {
+    --cd-primary: #f27522;
+    --cd-bg: #fff9f6;
+    --cd-text: #333;
+    --cd-radius: 10px;
+    --cd-inner-radius: 5px;
+  }
+
+  #custom-countdown-wrapper {
+    margin: 20px 0;
+    padding: 15px;
+    border-radius: var(--cd-radius);
+    background-color: var(--cd-bg);
+    border: 1.5px solid var(--cd-primary);
+    max-width: 400px;
+    font-family: inherit;
+  }
+
+  .cd-header {
+    color: var(--cd-text);
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .cd-header::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--cd-primary);
+    border-radius: 50%;
+    animation: cd-blink 1s infinite;
+  }
+
+  @keyframes cd-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .cd-timer-display {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .cd-block {
+    text-align: center;
+  }
+
+  .cd-number {
+    background: var(--cd-primary);
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 6px 10px;
+    border-radius: var(--cd-inner-radius);
+    min-width: 35px;
+    display: block;
+    line-height: 1;
+  }
+
+  .cd-label {
+    font-size: 10px;
+    color: var(--cd-primary);
+    margin-top: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .cd-sep {
+    font-weight: bold;
+    color: var(--cd-primary);
+    font-size: 18px;
+    margin-top: -16px; /* Adjusted for better alignment */
+  }
+
+  @media (max-width: 749px) {
+    #custom-countdown-wrapper {
+      margin: 15px auto;
+    }
+  }
+</style>
+
+<div id="custom-countdown-wrapper">
+  <div class="cd-header">Penawaran Khusus untuk Pengguna Baru!</div>
+  <div class="cd-timer-display">
+    <div class="cd-block">
+      <span class="cd-number" id="js-days">00</span>
+      <div class="cd-label">Hari</div>
+    </div>
+    <div class="cd-sep">:</div>
+    <div class="cd-block">
+      <span class="cd-number" id="js-hours">00</span>
+      <div class="cd-label">Jam</div>
+    </div>
+    <div class="cd-sep">:</div>
+    <div class="cd-block">
+      <span class="cd-number" id="js-mins">00</span>
+      <div class="cd-label">Menit</div>
+    </div>
+    <div class="cd-sep">:</div>
+    <div class="cd-block">
+      <span class="cd-number" id="js-secs">00</span>
+      <div class="cd-label">Detik</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const STORAGE_KEY = 'shopify_3day_countdown';
+    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+    const els = {
+      days: document.getElementById('js-days'),
+      hours: document.getElementById('js-hours'),
+      mins: document.getElementById('js-mins'),
+      secs: document.getElementById('js-secs')
+    };
+
+    function startCountdown() {
+      let deadline = localStorage.getItem(STORAGE_KEY);
+      const now = Date.now();
+
+      if (!deadline || now > parseInt(deadline)) {
+        deadline = now + THREE_DAYS_MS;
+        localStorage.setItem(STORAGE_KEY, deadline);
+      }
+
+      const updateTimer = () => {
+        const diff = parseInt(deadline) - Date.now();
+
+        if (diff <= 0) {
+          const newDeadline = Date.now() + THREE_DAYS_MS;
+          localStorage.setItem(STORAGE_KEY, newDeadline);
+          deadline = newDeadline; // Update local reference
+        }
+
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+        if (els.days) els.days.textContent = String(d).padStart(2, '0');
+        if (els.hours) els.hours.textContent = String(h).padStart(2, '0');
+        if (els.mins) els.mins.textContent = String(m).padStart(2, '0');
+        if (els.secs) els.secs.textContent = String(s).padStart(2, '0');
+      };
+
+      setInterval(updateTimer, 1000);
+      updateTimer(); // Initial call
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startCountdown);
+    } else {
+      startCountdown();
+    }
+  })();
+</script>
